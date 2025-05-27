@@ -1,14 +1,24 @@
 import { apiClient } from './api';
 
 // Generate and download report
-export const generateReport = async (reportType, period, selectedDate, format) => {
+export const generateReport = async (reportType, period, dateData, format) => {
   try {
+    // Create request data object
     const requestData = {
       report_type: reportType,
       period: period,
-      date: selectedDate,
       format: format
     };
+    
+    // Add date info based on period type
+    if (period === 'date_range' && typeof dateData === 'object') {
+      // For date range period, include start and end dates
+      requestData.start_date = dateData.startDate;
+      requestData.end_date = dateData.endDate;
+    } else if (dateData) {
+      // For single date (custom period)
+      requestData.date = dateData;
+    }
 
     // Make request to generate report
     const response = await apiClient.post('/reports/generate', requestData, {
@@ -24,7 +34,7 @@ export const generateReport = async (reportType, period, selectedDate, format) =
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = generateFileName(reportType, period, selectedDate, format);
+      link.download = generateFileName(reportType, period, dateData, format);
       
       // Trigger download
       document.body.appendChild(link);
@@ -114,7 +124,7 @@ const getContentType = (format) => {
 };
 
 // Helper function to generate filename
-const generateFileName = (reportType, period, selectedDate, format) => {
+const generateFileName = (reportType, period, dateData, format) => {
   const reportNames = {
     'kualitas-telur': 'Laporan_Kualitas_Telur',
     'performa-conveyor': 'Laporan_Performa_Conveyor',
@@ -129,19 +139,31 @@ const generateFileName = (reportType, period, selectedDate, format) => {
     'last30days': '30_Hari_Terakhir',
     'thisMonth': 'Bulan_Ini',
     'lastMonth': 'Bulan_Lalu',
-    'custom': 'Custom'
+    'custom': 'Tanggal',
+    'date_range': 'Periode'
   };
 
   const reportName = reportNames[reportType] || 'Laporan';
   const periodName = periodNames[period] || 'Custom';
-  const dateStr = selectedDate ? selectedDate.replace(/-/g, '') : new Date().toISOString().split('T')[0].replace(/-/g, '');
+  
+  let dateStr = '';
+  if (period === 'date_range' && typeof dateData === 'object') {
+    // For date range, use start and end dates in the filename
+    const startDateStr = dateData.startDate ? dateData.startDate.replace(/-/g, '') : '';
+    const endDateStr = dateData.endDate ? dateData.endDate.replace(/-/g, '') : '';
+    dateStr = `${startDateStr}_${endDateStr}`;
+  } else {
+    // For single date or other periods
+    dateStr = dateData ? dateData.replace(/-/g, '') : new Date().toISOString().split('T')[0].replace(/-/g, '');
+  }
+  
   const extension = format.toLowerCase() === 'excel' ? 'xlsx' : format.toLowerCase();
 
   return `${reportName}_${periodName}_${dateStr}.${extension}`;
 };
 
 // Helper function to format period for display
-export const formatPeriodForDisplay = (period, selectedDate) => {
+export const formatPeriodForDisplay = (period, dateData) => {
   const periodLabels = {
     'today': 'Hari Ini',
     'yesterday': 'Kemarin',
@@ -149,8 +171,19 @@ export const formatPeriodForDisplay = (period, selectedDate) => {
     'last30days': '30 Hari Terakhir',
     'thisMonth': 'Bulan Ini',
     'lastMonth': 'Bulan Lalu',
-    'custom': `Tanggal ${new Date(selectedDate).toLocaleDateString('id-ID')}`
+    'custom': `Tanggal ${typeof dateData === 'string' ? new Date(dateData).toLocaleDateString('id-ID') : ''}`,
+    'date_range': 'Periode Tertentu'
   };
+
+  // Handle date_range period
+  if (period === 'date_range' && typeof dateData === 'object') {
+    const startDateFormatted = dateData.startDate ? new Date(dateData.startDate).toLocaleDateString('id-ID') : '';
+    const endDateFormatted = dateData.endDate ? new Date(dateData.endDate).toLocaleDateString('id-ID') : '';
+    
+    if (startDateFormatted && endDateFormatted) {
+      return `Periode ${startDateFormatted} - ${endDateFormatted}`;
+    }
+  }
 
   return periodLabels[period] || 'Periode Tidak Diketahui';
 };

@@ -1,9 +1,11 @@
 import { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import logo from '../assets/smarternak.png';
 
 const Sidebar = ({ isOpen, onClose }) => {
   const location = useLocation();
+  const navigate = useNavigate();
   const { user, isSuperAdmin, logout } = useAuth();
   const [showLogoutModal, setShowLogoutModal] = useState(false);
 
@@ -52,6 +54,11 @@ const Sidebar = ({ isOpen, onClose }) => {
     setShowLogoutModal(false);
   };
 
+  const goToSettings = () => {
+    navigate('/pengaturan');
+    onClose();
+  };
+
   // Filter menu items based on user role
   const filteredMenuItems = menuItems.filter(item => {
     if (item.superAdminOnly && !isSuperAdmin()) {
@@ -78,13 +85,7 @@ const Sidebar = ({ isOpen, onClose }) => {
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
           <div className="flex items-center">
-            <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center mr-3">
-              <i className="fas fa-egg text-white text-lg"></i>
-            </div>
-            <div>
-              <h1 className="text-xl font-bold text-gray-800 dark:text-white">Smarternak</h1>
-              <p className="text-xs text-gray-500 dark:text-gray-400">IoT Monitoring</p>
-            </div>
+            <img src={logo} alt="Logo" className="mr-3" />
           </div>
           <button 
             onClick={onClose}
@@ -97,8 +98,16 @@ const Sidebar = ({ isOpen, onClose }) => {
         {/* User Info */}
         <div className="p-4 border-b border-gray-200 dark:border-gray-700">
           <div className="flex items-center">
-            <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-indigo-600 rounded-full flex items-center justify-center text-white font-medium">
-              {user?.name?.charAt(0)?.toUpperCase() || 'U'}
+            <div 
+              onClick={goToSettings}
+              className="w-10 h-10 bg-gradient-to-r from-purple-500 to-indigo-600 rounded-full flex items-center justify-center text-white font-medium overflow-hidden cursor-pointer hover:shadow-md transition-shadow"
+              title="Edit Profile"
+            >
+              {user?.avatar_url ? (
+                <img src={user.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
+              ) : (
+                user?.name?.charAt(0)?.toUpperCase() || 'U'
+              )}
             </div>
             <div className="ml-3">
               <p className="text-sm font-medium text-gray-900 dark:text-white">{user?.name}</p>

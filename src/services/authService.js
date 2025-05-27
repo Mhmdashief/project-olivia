@@ -61,8 +61,20 @@ class AuthService {
     try {
       const response = await apiClient.put('/auth/profile', profileData);
       
+      if (response.success) {
+        // If we successfully updated the profile, also update the stored user data
+        const storedUser = this.getStoredUser();
+        if (storedUser) {
+          const updatedUser = { ...storedUser, ...response.data.user };
+          
+          // Store the updated user data
+          localStorage.setItem('user_data', JSON.stringify(updatedUser));
+        }
+      }
+      
       return {
-        success: true,
+        success: response.success,
+        message: response.message,
         data: response.data
       };
     } catch (error) {

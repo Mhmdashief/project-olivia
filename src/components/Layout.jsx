@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 import Sidebar from './Sidebar';
 
 const Layout = ({ children }) => {
   const { isDarkMode, toggleTheme } = useTheme();
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const toggleSidebar = () => {
@@ -14,6 +16,10 @@ const Layout = ({ children }) => {
 
   const closeSidebar = () => {
     setSidebarOpen(false);
+  };
+
+  const goToSettings = () => {
+    navigate('/pengaturan');
   };
 
   return (
@@ -45,8 +51,16 @@ const Layout = ({ children }) => {
                   <p className="text-sm font-medium text-gray-900 dark:text-white">{user?.name}</p>
                   <p className="text-xs text-gray-500 dark:text-gray-400 capitalize">{user?.role}</p>
                 </div>
-                <div className="w-8 h-8 bg-gradient-to-r from-purple-500 to-indigo-600 rounded-full flex items-center justify-center text-white font-medium text-sm">
-                  {user?.name?.charAt(0)?.toUpperCase() || 'U'}
+                <div 
+                  onClick={goToSettings} 
+                  className="w-8 h-8 bg-gradient-to-r from-purple-500 to-indigo-600 rounded-full flex items-center justify-center text-white font-medium text-sm overflow-hidden cursor-pointer hover:shadow-md transition-shadow"
+                  title="Pengaturan Profil"
+                >
+                  {user?.avatar_url ? (
+                    <img src={user.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
+                  ) : (
+                    user?.name?.charAt(0)?.toUpperCase() || 'U'
+                  )}
                 </div>
               </div>
 

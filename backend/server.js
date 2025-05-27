@@ -4,6 +4,8 @@ const helmet = require('helmet');
 const morgan = require('morgan');
 const compression = require('compression');
 const rateLimit = require('express-rate-limit');
+const path = require('path');
+const fs = require('fs');
 require('dotenv').config();
 
 const { testConnection } = require('./config/database');
@@ -55,6 +57,23 @@ if (process.env.NODE_ENV === 'development') {
   app.use(morgan('combined'));
 }
 
+// Ensure uploads directory exists
+const uploadsDir = path.join(__dirname, 'uploads');
+const reportsDir = path.join(uploadsDir, 'reports');
+
+if (!fs.existsSync(uploadsDir)) {
+  console.log(`Creating uploads directory: ${uploadsDir}`);
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
+if (!fs.existsSync(reportsDir)) {
+  console.log(`Creating reports directory: ${reportsDir}`);
+  fs.mkdirSync(reportsDir, { recursive: true });
+}
+
+// Serve uploads directory statically
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
 // Health check endpoint
 app.get('/health', (req, res) => {
   res.json({
@@ -91,27 +110,34 @@ app.use((error, req, res, next) => {
   });
 });
 
-// Start server
-const startServer = async () => {
-  try {
-    // Test database connection
-    const dbConnected = await testConnection();
-    if (!dbConnected) {
-      console.error('❌ Failed to connect to database. Exiting...');
-      process.exit(1);
-    }
-
-    app.listen(PORT, () => {
-      console.log(`🚀 Smarternak Backend API running on port ${PORT}`);
-      console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
-      console.log(`🌐 CORS enabled for: ${process.env.FRONTEND_URL || 'http://localhost:3000'}`);
-      console.log(`📝 API Documentation: http://localhost:${PORT}/health`);
-    });
-  } catch (error) {
-    console.error('❌ Failed to start server:', error);
-    process.exit(1);
+// Test database connection before starting server
+const initDatabase = async () => {
+  console.log('Testing database connection...');
+  const connected = await testConnection();
+  
+  if (!connected) {
+    console.error('Could not connect to database. Server will continue but functionality will be limited.');
+  } else {
+    console.log('Database connection successful.');
   }
 };
+
+// Call initDatabase before starting the server
+initDatabase().then(() => {
+  // Start the server
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT} in ${process.env.NODE_ENV || 'development'} mode`);
+    console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`🌐 CORS enabled for: ${process.env.FRONTEND_URL || 'http://localhost:3000'}`);
+    console.log(`📝 API Documentation: http://localhost:${PORT}/health`);
+  });
+}).catch(err => {
+  console.error('Error during initialization:', err);
+  // Start the server anyway to allow partial functionality
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT} in ${process.env.NODE_ENV || 'development'} mode (with errors)`);
+  });
+});
 
 // Handle graceful shutdown
 process.on('SIGTERM', () => {
@@ -122,6 +148,4 @@ process.on('SIGTERM', () => {
 process.on('SIGINT', () => {
   console.log('SIGINT received. Shutting down gracefully...');
   process.exit(0);
-});
-
-startServer(); 
+}); 

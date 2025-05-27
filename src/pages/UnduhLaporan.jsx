@@ -17,12 +17,17 @@ const UnduhLaporan = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [successMessage, setSuccessMessage] = useState(null);
+  
+  // Add new state for date range
+  const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
+  const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
 
   const periodOptions = [
     { id: 'today', label: 'Hari Ini', description: 'Data hari ini saja' },
     { id: 'last7days', label: '7 Hari Terakhir', description: 'Data 7 hari terakhir' },
     { id: 'last30days', label: '30 Hari Terakhir', description: 'Data 30 hari terakhir' },
-    { id: 'custom', label: 'Tanggal Tertentu', description: 'Pilih tanggal spesifik' }
+    { id: 'custom', label: 'Tanggal Tertentu', description: 'Pilih tanggal spesifik' },
+    { id: 'date_range', label: 'Periode Tertentu', description: 'Pilih rentang tanggal' }
   ];
 
   const reportTypes = [
@@ -34,25 +39,11 @@ const UnduhLaporan = () => {
       formats: ['pdf', 'excel', 'csv']
     },
     {
-      id: 'performa-conveyor',
-      title: 'Laporan Performa Conveyor',
-      description: 'Statistik operasional dan performa conveyor',
-      icon: 'cogs',
-      formats: ['pdf', 'excel', 'csv']
-    },
-    {
       id: 'statistik-produksi',
       title: 'Statistik Produksi',
       description: 'Laporan statistik produksi telur harian dan bulanan',
       icon: 'chart-bar',
       formats: ['pdf', 'excel']
-    },
-    {
-      id: 'riwayat-aktivitas',
-      title: 'Riwayat Aktivitas',
-      description: 'Log aktivitas sistem dan pengguna',
-      icon: 'history',
-      formats: ['pdf', 'csv']
     }
   ];
 
@@ -92,16 +83,47 @@ const UnduhLaporan = () => {
       setError(null);
       setSuccessMessage(null);
 
-      // Validate inputs
+      // Validate inputs based on selected period
       if (selectedPeriod === 'custom' && !selectedDate) {
         setError('Silakan pilih tanggal terlebih dahulu');
         return;
+      }
+      
+      if (selectedPeriod === 'date_range') {
+        // Validate date range
+        if (!startDate || !endDate) {
+          setError('Silakan pilih tanggal mulai dan tanggal akhir');
+          return;
+        }
+        
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        
+        if (start > end) {
+          setError('Tanggal mulai tidak boleh lebih besar dari tanggal akhir');
+          return;
+        }
+      }
+
+      // Prepare request data based on selected period
+      let requestData = {
+        reportType: selectedReportType,
+        period: selectedPeriod,
+        format: format
+      };
+      
+      // Add appropriate date parameters based on period type
+      if (selectedPeriod === 'custom') {
+        requestData.date = selectedDate;
+      } else if (selectedPeriod === 'date_range') {
+        requestData.startDate = startDate;
+        requestData.endDate = endDate;
       }
 
       const result = await generateReport(
         selectedReportType,
         selectedPeriod,
-        selectedDate,
+        selectedPeriod === 'date_range' ? { startDate, endDate } : selectedDate,
         format
       );
 
@@ -190,7 +212,7 @@ const UnduhLaporan = () => {
         {/* Period Selection */}
         <div className="mb-6">
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Periode</label>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
             {periodOptions.map((option) => (
               <button
                 key={option.id}
@@ -226,6 +248,42 @@ const UnduhLaporan = () => {
           </div>
         )}
 
+        {/* Date Range Input - Only show when date_range is selected */}
+        {selectedPeriod === 'date_range' && (
+          <div className="mb-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Tanggal Mulai</label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                    <i className="far fa-calendar-alt text-gray-400 dark:text-gray-500"></i>
+                  </div>
+                  <input
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    className="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg pl-10 pr-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Tanggal Akhir</label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                    <i className="far fa-calendar-alt text-gray-400 dark:text-gray-500"></i>
+                  </div>
+                  <input
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    className="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg pl-10 pr-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Selected Period Info */}
         <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
           <div className="flex items-center gap-2">
@@ -237,6 +295,23 @@ const UnduhLaporan = () => {
           {selectedPeriod === 'custom' && (
             <div className="text-sm text-blue-600 dark:text-blue-400 mt-1">
               Tanggal: {new Date(selectedDate).toLocaleDateString('id-ID', { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+              })}
+            </div>
+          )}
+          {selectedPeriod === 'date_range' && (
+            <div className="text-sm text-blue-600 dark:text-blue-400 mt-1">
+              Dari: {new Date(startDate).toLocaleDateString('id-ID', { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+              })}
+              <br />
+              Sampai: {new Date(endDate).toLocaleDateString('id-ID', { 
                 weekday: 'long', 
                 year: 'numeric', 
                 month: 'long', 
@@ -277,14 +352,14 @@ const UnduhLaporan = () => {
                         e.stopPropagation();
                         handleGenerateReport(format);
                       }}
-                      disabled={isGenerating || (selectedPeriod === 'custom' && !selectedDate)}
+                      disabled={isGenerating || (selectedPeriod === 'custom' && !selectedDate) || (selectedPeriod === 'date_range' && (!startDate || !endDate)) || selectedReportType !== report.id}
                       className={`px-4 py-1.5 rounded-lg text-sm font-medium flex items-center gap-1.5 transition-all
-                        ${isGenerating ? 'bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed' : 
+                        ${isGenerating || selectedReportType !== report.id ? 'bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed' : 
                           format === 'pdf' ? 'bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 hover:bg-red-200 dark:hover:bg-red-800' :
                           format === 'excel' ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-800' :
                           'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-800'
                         }
-                        ${(selectedPeriod === 'custom' && !selectedDate) ? 'opacity-50 cursor-not-allowed' : ''}
+                        ${((selectedPeriod === 'custom' && !selectedDate) || (selectedPeriod === 'date_range' && (!startDate || !endDate)) || selectedReportType !== report.id) ? 'opacity-50 cursor-not-allowed' : ''}
                       `}
                     >
                       {isGenerating ? (

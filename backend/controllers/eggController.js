@@ -3,6 +3,7 @@ const { executeQuery } = require('../config/database');
 // Get all eggs with filtering and pagination
 const getAllEggs = async (req, res) => {
   try {
+    // For Postman testing, use: GET /api/eggs?page=1&limit=10&date=2023-12-01&quality=good&sort_by=scanned_at&sort_order=DESC
     const { 
       page = 1, 
       limit = 10, 

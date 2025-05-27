@@ -74,6 +74,19 @@ const validateUserUpdate = [
     .optional()
     .isIn(['admin', 'superadmin'])
     .withMessage('Role must be either admin or superadmin'),
+  body('avatar_url')
+    .optional()
+    .custom((value) => {
+      // Check if it's a base64 string starting with data:image
+      if (value && !value.startsWith('data:image/')) {
+        throw new Error('Avatar must be a valid base64 encoded image');
+      }
+      // Optional: Check size limit (approximately)
+      if (value && value.length > 5000000) { // ~5MB limit
+        throw new Error('Avatar image is too large (max 5MB)');
+      }
+      return true;
+    }),
   handleValidationErrors
 ];
 

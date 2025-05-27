@@ -168,18 +168,19 @@ const getProfile = async (req, res) => {
 const updateProfile = async (req, res) => {
   try {
     const userId = req.user.user_id;
-    const { name, phone, bio } = req.body;
+    const { name, phone, bio, avatar_url } = req.body;
 
     const updateQuery = `
       UPDATE users 
       SET name = COALESCE(?, name),
           phone = COALESCE(?, phone),
           bio = COALESCE(?, bio),
+          avatar_url = COALESCE(?, avatar_url),
           updated_at = CURRENT_TIMESTAMP
       WHERE user_id = ? AND is_active = TRUE
     `;
 
-    const updateResult = await executeQuery(updateQuery, [name, phone, bio, userId]);
+    const updateResult = await executeQuery(updateQuery, [name, phone, bio, avatar_url, userId]);
 
     if (!updateResult.success) {
       return res.status(500).json({

@@ -1,24 +1,22 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTheme } from '../contexts/ThemeContext';
+import { useAuth } from '../contexts/AuthContext';
 
 const Pengaturan = () => {
   const { isDarkMode, toggleTheme } = useTheme();
+  const { user, updateProfile } = useAuth();
   const [activeTab, setActiveTab] = useState('profile');
   const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isAvatarLoading, setIsAvatarLoading] = useState(false);
+  const [message, setMessage] = useState({ type: '', text: '' });
   const [profileData, setProfileData] = useState({
-    name: 'John Doe',
-    email: 'john.doe@smarternak.com',
-    phone: '+62 812-3456-7890',
-    role: 'Admin',
-    avatar: null,
-    bio: 'Administrator sistem Smarternak dengan pengalaman 5 tahun dalam manajemen peternakan modern.'
-  });
-
-  const [systemSettings, setSystemSettings] = useState({
-    notifications: {
-      email: true,
-      push: true
-    }
+    name: '',
+    email: '',
+    phone: '',
+    role: '',
+    avatar_url: null,
+    bio: ''
   });
 
   const [securitySettings, setSecuritySettings] = useState({
@@ -31,22 +29,79 @@ const Pengaturan = () => {
   const tabs = [
     { id: 'profile', label: 'Profil', icon: 'user' },
     { id: 'account', label: 'Akun', icon: 'cog' },
-    { id: 'notifications', label: 'Notifikasi', icon: 'bell' },
     { id: 'security', label: 'Keamanan', icon: 'shield-alt' }
   ];
 
-  const handleProfileSave = () => {
-    setIsEditing(false);
-    // In real app, save to backend
-    console.log('Profile saved:', profileData);
+  // Load user data when component mounts or user changes
+  useEffect(() => {
+    if (user) {
+      setProfileData({
+        name: user.name || '',
+        email: user.email || '',
+        phone: user.phone || '',
+        role: user.role || '',
+        avatar_url: user.avatar_url || null,
+        bio: user.bio || ''
+      });
+    }
+  }, [user]);
+
+  const handleProfileSave = async () => {
+    try {
+      setIsSaving(true);
+      setMessage({ type: '', text: '' });
+
+      const result = await updateProfile({
+        name: profileData.name,
+        phone: profileData.phone,
+        bio: profileData.bio,
+        avatar_url: profileData.avatar_url
+      });
+
+      if (result.success) {
+        setMessage({ type: 'success', text: 'Profil berhasil diperbarui' });
+        setIsEditing(false);
+      } else {
+        setMessage({ type: 'error', text: result.message || 'Gagal memperbarui profil' });
+      }
+    } catch (error) {
+      console.error('Error saving profile:', error);
+      setMessage({ type: 'error', text: 'Terjadi kesalahan saat menyimpan profil' });
+    } finally {
+      setIsSaving(false);
+      // Auto hide message after 3 seconds
+      setTimeout(() => {
+        setMessage({ type: '', text: '' });
+      }, 3000);
+    }
   };
 
   const handleAvatarChange = (e) => {
     const file = e.target.files[0];
     if (file) {
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        setMessage({ type: 'error', text: 'File harus berupa gambar' });
+        return;
+      }
+
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        setMessage({ type: 'error', text: 'Ukuran gambar terlalu besar (maks 5MB)' });
+        return;
+      }
+
+      // Show loading indicator
+      setIsAvatarLoading(true);
+
       const reader = new FileReader();
       reader.onload = (e) => {
-        setProfileData(prev => ({ ...prev, avatar: e.target.result }));
+        setProfileData(prev => ({ ...prev, avatar_url: e.target.result }));
+        setIsAvatarLoading(false);
+      };
+      reader.onerror = () => {
+        setMessage({ type: 'error', text: 'Gagal memproses gambar' });
+        setIsAvatarLoading(false);
       };
       reader.readAsDataURL(file);
     }
@@ -54,6 +109,20 @@ const Pengaturan = () => {
 
   const renderProfileTab = () => (
     <div className="space-y-6">
+      {/* Status Message */}
+      {message.text && (
+        <div className={`${
+          message.type === 'success' 
+            ? 'bg-green-100 dark:bg-green-900/30 border-green-400 dark:border-green-700 text-green-700 dark:text-green-300' 
+            : 'bg-red-100 dark:bg-red-900/30 border-red-400 dark:border-red-700 text-red-700 dark:text-red-300'
+        } px-4 py-3 rounded-xl border`}>
+          <div className="flex items-center">
+            <i className={`fas fa-${message.type === 'success' ? 'check-circle' : 'exclamation-triangle'} mr-2`}></i>
+            <span>{message.text}</span>
+          </div>
+        </div>
+      )}
+      
       {/* Theme Toggle */}
       <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-md border border-gray-100 dark:border-gray-700">
         <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4">Tema Aplikasi</h3>
@@ -80,8 +149,12 @@ const Pengaturan = () => {
         <div className="flex items-center space-x-6">
           <div className="relative">
             <div className="w-24 h-24 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center text-white text-2xl font-bold">
-              {profileData.avatar ? (
-                <img src={profileData.avatar} alt="Avatar" className="w-24 h-24 rounded-full object-cover" />
+              {isAvatarLoading ? (
+                <div className="flex items-center justify-center">
+                  <i className="fas fa-spinner fa-spin text-white"></i>
+                </div>
+              ) : profileData.avatar_url ? (
+                <img src={profileData.avatar_url} alt="Avatar" className="w-24 h-24 rounded-full object-cover" />
               ) : (
                 profileData.name.charAt(0)
               )}
@@ -93,6 +166,7 @@ const Pengaturan = () => {
                   type="file"
                   accept="image/*"
                   onChange={handleAvatarChange}
+                  disabled={isAvatarLoading}
                   className="hidden"
                 />
               </label>
@@ -112,14 +186,24 @@ const Pengaturan = () => {
           <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100">Informasi Profil</h3>
           <button
             onClick={() => isEditing ? handleProfileSave() : setIsEditing(true)}
+            disabled={isSaving}
             className={`px-4 py-2 rounded-lg font-medium transition-colors ${
               isEditing 
                 ? 'bg-green-500 hover:bg-green-600 text-white' 
                 : 'bg-blue-500 hover:bg-blue-600 text-white'
-            }`}
+            } ${isSaving ? 'opacity-75 cursor-not-allowed' : ''}`}
           >
-            <i className={`fas fa-${isEditing ? 'save' : 'edit'} mr-2`}></i>
-            {isEditing ? 'Simpan' : 'Edit'}
+            {isSaving ? (
+              <>
+                <i className="fas fa-spinner fa-spin mr-2"></i>
+                Menyimpan...
+              </>
+            ) : (
+              <>
+                <i className={`fas fa-${isEditing ? 'save' : 'edit'} mr-2`}></i>
+                {isEditing ? 'Simpan' : 'Edit'}
+              </>
+            )}
           </button>
         </div>
 
@@ -130,12 +214,12 @@ const Pengaturan = () => {
               type="text"
               value={profileData.name}
               onChange={(e) => setProfileData(prev => ({ ...prev, name: e.target.value }))}
-              disabled={!isEditing}
+              disabled={!isEditing || isSaving}
               className={`w-full border rounded-lg px-4 py-2 ${
                 isEditing 
                   ? 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500' 
                   : 'border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100'
-              } focus:outline-none`}
+              } focus:outline-none ${isSaving ? 'opacity-75 cursor-not-allowed' : ''}`}
             />
           </div>
 
@@ -144,13 +228,8 @@ const Pengaturan = () => {
             <input
               type="email"
               value={profileData.email}
-              onChange={(e) => setProfileData(prev => ({ ...prev, email: e.target.value }))}
-              disabled={!isEditing}
-              className={`w-full border rounded-lg px-4 py-2 ${
-                isEditing 
-                  ? 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500' 
-                  : 'border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100'
-              } focus:outline-none`}
+              disabled={true} // Email can't be edited
+              className="w-full border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 rounded-lg px-4 py-2 text-gray-900 dark:text-gray-100"
             />
           </div>
 
@@ -160,12 +239,12 @@ const Pengaturan = () => {
               type="tel"
               value={profileData.phone}
               onChange={(e) => setProfileData(prev => ({ ...prev, phone: e.target.value }))}
-              disabled={!isEditing}
+              disabled={!isEditing || isSaving}
               className={`w-full border rounded-lg px-4 py-2 ${
                 isEditing 
                   ? 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500' 
                   : 'border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100'
-              } focus:outline-none`}
+              } focus:outline-none ${isSaving ? 'opacity-75 cursor-not-allowed' : ''}`}
             />
           </div>
 
@@ -185,13 +264,13 @@ const Pengaturan = () => {
           <textarea
             value={profileData.bio}
             onChange={(e) => setProfileData(prev => ({ ...prev, bio: e.target.value }))}
-            disabled={!isEditing}
+            disabled={!isEditing || isSaving}
             rows={3}
             className={`w-full border rounded-lg px-4 py-2 ${
               isEditing 
                 ? 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500' 
                 : 'border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100'
-            } focus:outline-none`}
+            } focus:outline-none ${isSaving ? 'opacity-75 cursor-not-allowed' : ''}`}
           />
         </div>
       </div>
@@ -248,38 +327,6 @@ const Pengaturan = () => {
             </button>
           </div>
         </div>
-      </div>
-    </div>
-  );
-
-  const renderNotificationsTab = () => (
-    <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-md border border-gray-100 dark:border-gray-700">
-      <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4">Preferensi Notifikasi</h3>
-      <div className="space-y-6">
-        {Object.entries(systemSettings.notifications).map(([key, value]) => (
-          <div key={key} className="flex justify-between items-center p-4 border border-gray-200 dark:border-gray-600 rounded-lg">
-            <div>
-              <h4 className="font-medium text-gray-800 dark:text-gray-200 capitalize">
-                {key === 'email' ? 'Email' : 'Push Notification'}
-              </h4>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                {key === 'email' ? 'Terima notifikasi melalui email' : 'Notifikasi push di browser'}
-              </p>
-            </div>
-            <label className="relative inline-flex items-center cursor-pointer">
-              <input
-                type="checkbox"
-                checked={value}
-                onChange={(e) => setSystemSettings(prev => ({
-                  ...prev,
-                  notifications: { ...prev.notifications, [key]: e.target.checked }
-                }))}
-                className="sr-only peer"
-              />
-              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
-            </label>
-          </div>
-        ))}
       </div>
     </div>
   );
@@ -381,7 +428,6 @@ const Pengaturan = () => {
         <div className="lg:w-3/4">
           {activeTab === 'profile' && renderProfileTab()}
           {activeTab === 'account' && renderAccountTab()}
-          {activeTab === 'notifications' && renderNotificationsTab()}
           {activeTab === 'security' && renderSecurityTab()}
         </div>
       </div>
