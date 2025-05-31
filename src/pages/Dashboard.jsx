@@ -201,11 +201,6 @@ const Dashboard = () => {
     navigate('/data-kualitas-telur');
   };
 
-  // Fungsi untuk navigasi ke Pantau Conveyor
-  const handleViewConveyorDetail = () => {
-    navigate('/pantau-conveyor');
-  };
-
   // Load data on component mount
   useEffect(() => {
     loadDashboardData();
@@ -453,9 +448,8 @@ const Dashboard = () => {
         </div>
       </div>
       
-      {/* Recent Eggs & Conveyor Status */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-        {/* Recent Eggs */}
+      {/* Recent Eggs */}
+      <div className="grid grid-cols-1 gap-8 mb-8">
         <div className="bg-blue-50 dark:bg-gray-800 p-6 rounded-xl shadow-sm hover:shadow-md transition-all border border-blue-100 dark:border-gray-700">
           <div className="flex justify-between items-center mb-5">
             <h2 className="text-lg font-semibold text-blue-800 dark:text-gray-100">Daftar Telur Terbaru</h2>
@@ -511,50 +505,6 @@ const Dashboard = () => {
               className="text-blue-600 dark:text-blue-400 flex items-center gap-1 hover:text-blue-700 dark:hover:text-blue-300 transition-all"
             >
               <span>Lihat semua data telur</span>
-              <i className="fas fa-arrow-right ml-1 text-xs"></i>
-            </button>
-          </div>
-        </div>
-        
-        {/* Conveyor Status */}
-        <div className="bg-blue-50 dark:bg-gray-800 p-6 rounded-xl shadow-sm hover:shadow-md transition-all border border-blue-100 dark:border-gray-700">
-          <div className="flex justify-between items-center mb-5">
-            <h2 className="text-lg font-semibold text-blue-800 dark:text-gray-100">Status Conveyor</h2>
-            <button 
-              onClick={handleViewConveyorDetail}
-              className="text-blue-600 dark:text-blue-400 text-sm hover:text-blue-700 dark:hover:text-blue-300 transition-all flex items-center gap-1"
-            >
-              <span>Detail</span>
-              <i className="fas fa-chevron-right text-xs"></i>
-            </button>
-          </div>
-          
-          <div className="space-y-4">
-            <div className="flex justify-between items-center p-4 bg-white dark:bg-gray-700 rounded-lg border border-blue-100 dark:border-gray-600">
-              <div className="flex items-center gap-3">
-                <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-                <span className="text-blue-800 dark:text-gray-200 font-medium">Status</span>
-              </div>
-              <span className="text-green-600 dark:text-green-400 font-semibold">Aktif</span>
-            </div>
-            
-            <div className="flex justify-between items-center p-4 bg-white dark:bg-gray-700 rounded-lg border border-blue-100 dark:border-gray-600">
-              <span className="text-blue-800 dark:text-gray-200 font-medium">Kecepatan</span>
-              <span className="text-blue-600 dark:text-blue-400 font-semibold">65 RPM</span>
-            </div>
-            
-            <div className="flex justify-between items-center p-4 bg-white dark:bg-gray-700 rounded-lg border border-blue-100 dark:border-gray-600">
-              <span className="text-blue-800 dark:text-gray-200 font-medium">Telur Diproses</span>
-              <span className="text-blue-600 dark:text-blue-400 font-semibold">{dashboardStats.totalEggs}</span>
-            </div>
-          </div>
-          
-          <div className="mt-5">
-            <button 
-              onClick={handleViewConveyorDetail}
-              className="text-blue-600 dark:text-blue-400 flex items-center gap-1 hover:text-blue-700 dark:hover:text-blue-300 transition-all"
-            >
-              <span>Pantau conveyor</span>
               <i className="fas fa-arrow-right ml-1 text-xs"></i>
             </button>
           </div>

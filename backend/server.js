@@ -125,12 +125,12 @@ const initDatabase = async () => {
 // Call initDatabase before starting the server
 initDatabase().then(() => {
   // Start the server
-  app.listen(PORT, () => {
+    app.listen(PORT, () => {
     console.log(`Server running on port ${PORT} in ${process.env.NODE_ENV || 'development'} mode`);
-    console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
-    console.log(`🌐 CORS enabled for: ${process.env.FRONTEND_URL || 'http://localhost:3000'}`);
-    console.log(`📝 API Documentation: http://localhost:${PORT}/health`);
-  });
+      console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
+      console.log(`🌐 CORS enabled for: ${process.env.FRONTEND_URL || 'http://localhost:3000'}`);
+      console.log(`📝 API Documentation: http://localhost:${PORT}/health`);
+    });
 }).catch(err => {
   console.error('Error during initialization:', err);
   // Start the server anyway to allow partial functionality
@@ -148,4 +148,4 @@ process.on('SIGTERM', () => {
 process.on('SIGINT', () => {
   console.log('SIGINT received. Shutting down gracefully...');
   process.exit(0);
-}); 
+});

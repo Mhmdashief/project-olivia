@@ -109,6 +109,17 @@ export const downloadExistingReport = async (reportId) => {
   }
 };
 
+// Delete report from history
+export const deleteReport = async (reportId) => {
+  try {
+    const response = await apiClient.delete(`/reports/${reportId}`);
+    return response;
+  } catch (error) {
+    console.error('Delete report error:', error);
+    throw error;
+  }
+};
+
 // Helper function to get content type based on format
 const getContentType = (format) => {
   switch (format.toLowerCase()) {
@@ -127,7 +138,6 @@ const getContentType = (format) => {
 const generateFileName = (reportType, period, dateData, format) => {
   const reportNames = {
     'kualitas-telur': 'Laporan_Kualitas_Telur',
-    'performa-conveyor': 'Laporan_Performa_Conveyor',
     'statistik-produksi': 'Statistik_Produksi',
     'riwayat-aktivitas': 'Riwayat_Aktivitas'
   };
@@ -192,7 +202,6 @@ export const formatPeriodForDisplay = (period, dateData) => {
 export const getReportTypeDisplayName = (reportType) => {
   const reportNames = {
     'kualitas-telur': 'Laporan Kualitas Telur',
-    'performa-conveyor': 'Laporan Performa Conveyor',
     'statistik-produksi': 'Statistik Produksi',
     'riwayat-aktivitas': 'Riwayat Aktivitas'
   };
@@ -215,6 +224,7 @@ export default {
   generateReport,
   getReportHistory,
   downloadExistingReport,
+  deleteReport,
   formatPeriodForDisplay,
   getReportTypeDisplayName,
   formatFileSize

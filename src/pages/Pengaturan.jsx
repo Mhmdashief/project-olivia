@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 
 const Pengaturan = () => {
   const { isDarkMode, toggleTheme } = useTheme();
-  const { user, updateProfile } = useAuth();
+  const { user, updateProfile, changePassword } = useAuth();
   const [activeTab, setActiveTab] = useState('profile');
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -19,6 +19,21 @@ const Pengaturan = () => {
     bio: ''
   });
 
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+
+  const [passwordErrors, setPasswordErrors] = useState({});
+  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
+  const [passwordMessage, setPasswordMessage] = useState({ type: '', text: '' });
+  const [showPasswords, setShowPasswords] = useState({
+    currentPassword: false,
+    newPassword: false,
+    confirmPassword: false
+  });
+
   const [securitySettings, setSecuritySettings] = useState({
     twoFactor: false,
     loginNotifications: true,
@@ -28,8 +43,7 @@ const Pengaturan = () => {
 
   const tabs = [
     { id: 'profile', label: 'Profil', icon: 'user' },
-    { id: 'account', label: 'Akun', icon: 'cog' },
-    { id: 'security', label: 'Keamanan', icon: 'shield-alt' }
+    { id: 'account', label: 'Akun', icon: 'cog' }
   ];
 
   // Load user data when component mounts or user changes
@@ -45,6 +59,100 @@ const Pengaturan = () => {
       });
     }
   }, [user]);
+
+  // Reset message states when switching tabs
+  useEffect(() => {
+    // Reset any error/success messages when switching tabs
+    setMessage({ type: '', text: '' });
+    setPasswordMessage({ type: '', text: '' });
+    setPasswordErrors({});
+  }, [activeTab]);
+
+  // Handle password input changes
+  const handlePasswordChange = (e) => {
+    const { name, value } = e.target;
+    setPasswordData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+
+    // Clear error when user starts typing
+    if (passwordErrors[name]) {
+      setPasswordErrors(prev => ({
+        ...prev,
+        [name]: ''
+      }));
+    }
+  };
+
+  // Validate password form
+  const validatePasswordForm = () => {
+    const errors = {};
+    
+    if (!passwordData.currentPassword) {
+      errors.currentPassword = 'Password lama harus diisi';
+    }
+    
+    if (!passwordData.newPassword) {
+      errors.newPassword = 'Password baru harus diisi';
+    } else if (passwordData.newPassword.length < 6) {
+      errors.newPassword = 'Password baru minimal 6 karakter';
+    } else if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(passwordData.newPassword)) {
+      errors.newPassword = 'Password harus mengandung huruf kecil, huruf besar, dan angka';
+    }
+    
+    if (!passwordData.confirmPassword) {
+      errors.confirmPassword = 'Konfirmasi password harus diisi';
+    } else if (passwordData.newPassword !== passwordData.confirmPassword) {
+      errors.confirmPassword = 'Konfirmasi password tidak cocok';
+    }
+    
+    setPasswordErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  // Handle password update
+  const handleUpdatePassword = async () => {
+    if (!validatePasswordForm()) return;
+    
+    try {
+      setIsUpdatingPassword(true);
+      setPasswordMessage({ type: '', text: '' });
+      
+      const result = await changePassword({
+        currentPassword: passwordData.currentPassword,
+        newPassword: passwordData.newPassword,
+        confirmPassword: passwordData.confirmPassword
+      });
+      
+      if (result.success) {
+        setPasswordMessage({ 
+          type: 'success', 
+          text: 'Password berhasil diperbarui' 
+        });
+        
+        // Reset form
+        setPasswordData({
+          currentPassword: '',
+          newPassword: '',
+          confirmPassword: ''
+        });
+      } else {
+        setPasswordMessage({ 
+          type: 'error', 
+          text: result.message || 'Gagal memperbarui password' 
+        });
+      }
+    } catch (error) {
+      console.error('Password update error:', error);
+      setPasswordMessage({ 
+        type: 'error', 
+        text: 'Terjadi kesalahan saat memperbarui password' 
+      });
+    } finally {
+      setIsUpdatingPassword(false);
+    }
+  };
 
   const handleProfileSave = async () => {
     try {
@@ -66,13 +174,13 @@ const Pengaturan = () => {
       }
     } catch (error) {
       console.error('Error saving profile:', error);
-      setMessage({ type: 'error', text: 'Terjadi kesalahan saat menyimpan profil' });
+      setMessage({ type: 'error', text: error.message || 'Terjadi kesalahan saat menyimpan profil' });
     } finally {
       setIsSaving(false);
-      // Auto hide message after 3 seconds
+      // Auto hide message after 5 seconds
       setTimeout(() => {
         setMessage({ type: '', text: '' });
-      }, 3000);
+      }, 5000);
     }
   };
 
@@ -107,9 +215,59 @@ const Pengaturan = () => {
     }
   };
 
+  // Toggle password visibility
+  const togglePasswordVisibility = (field) => {
+    setShowPasswords(prev => ({
+      ...prev,
+      [field]: !prev[field]
+    }));
+  };
+
+  // Generate a secure password
+  const generateSecurePassword = () => {
+    const lowercase = 'abcdefghijklmnopqrstuvwxyz';
+    const uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    const numbers = '0123456789';
+    const special = '!@#$%^&*()_-+=<>?';
+    
+    let password = '';
+    
+    // Ensure at least one of each character type
+    password += lowercase.charAt(Math.floor(Math.random() * lowercase.length));
+    password += uppercase.charAt(Math.floor(Math.random() * uppercase.length));
+    password += numbers.charAt(Math.floor(Math.random() * numbers.length));
+    
+    // Add more random characters to reach minimum length of 8
+    const allChars = lowercase + uppercase + numbers;
+    for (let i = password.length; i < 8; i++) {
+      password += allChars.charAt(Math.floor(Math.random() * allChars.length));
+    }
+    
+    // Shuffle the password characters
+    password = password.split('').sort(() => 0.5 - Math.random()).join('');
+    
+    setPasswordData(prev => ({
+      ...prev,
+      newPassword: password,
+      confirmPassword: password
+    }));
+  };
+
+  // Determine if current user can delete their own account
+  const canDeleteOwnAccount = () => {
+    if (!user) return false;
+    
+    // Default superadmin (user_id = 1) cannot delete their own account
+    if (user.user_id === 1) return false;
+    
+    // Regular superadmin and admin cannot delete their own accounts
+    // Only allow deletion by other superadmins
+    return false;
+  };
+
   const renderProfileTab = () => (
     <div className="space-y-6">
-      {/* Status Message */}
+      {/* Status Message - Only show success/error messages within the tab content */}
       {message.text && (
         <div className={`${
           message.type === 'success' 
@@ -277,119 +435,195 @@ const Pengaturan = () => {
     </div>
   );
 
-  const renderAccountTab = () => (
-    <div className="space-y-6">
-      {/* Change Password */}
-      <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-md border border-gray-100 dark:border-gray-700">
-        <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4">Ubah Password</h3>
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Password Lama</label>
-            <input
-              type="password"
-              className="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              placeholder="Masukkan password lama"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Password Baru</label>
-            <input
-              type="password"
-              className="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              placeholder="Masukkan password baru"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Konfirmasi Password Baru</label>
-            <input
-              type="password"
-              className="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              placeholder="Konfirmasi password baru"
-            />
-          </div>
-          <button className="bg-blue-500 hover:bg-blue-600 dark:bg-blue-600 dark:hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition-colors">
-            Update Password
-          </button>
-        </div>
-      </div>
-
-      {/* Account Actions */}
-      <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-md border border-gray-100 dark:border-gray-700">
-        <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4">Aksi Akun</h3>
-        <div className="space-y-4">
-          <div className="flex justify-between items-center p-4 border border-red-200 dark:border-red-800 rounded-lg bg-red-50 dark:bg-red-900/20">
+  const renderAccountTab = () => {
+    return (
+      <div className="space-y-6">
+        {/* Change Password */}
+        <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-md border border-gray-100 dark:border-gray-700">
+          <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4">Ubah Password</h3>
+          <div className="space-y-4">
             <div>
-              <h4 className="font-medium text-red-800 dark:text-red-300">Hapus Akun</h4>
-              <p className="text-sm text-red-600 dark:text-red-400">Hapus akun secara permanen (tidak dapat dibatalkan)</p>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Password Lama</label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <i className="fas fa-lock text-gray-400 dark:text-gray-500"></i>
+                </div>
+              <input
+                  type={showPasswords.currentPassword ? "text" : "password"}
+                  name="currentPassword"
+                  value={passwordData.currentPassword}
+                  onChange={handlePasswordChange}
+                  className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                    passwordErrors.currentPassword 
+                      ? 'border-red-300 dark:border-red-600 bg-red-50 dark:bg-red-900/20' 
+                      : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700'
+                  } text-gray-900 dark:text-gray-100`}
+                placeholder="Masukkan password lama"
+              />
+                <button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    togglePasswordVisibility('currentPassword');
+                  }}
+                  className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-500 dark:text-gray-500"
+                >
+                  <i className={`fas fa-${showPasswords.currentPassword ? 'eye-slash' : 'eye'}`}></i>
+                </button>
+              </div>
+              {passwordErrors.currentPassword && (
+                <p className="mt-1 text-sm text-red-600 dark:text-red-400">{passwordErrors.currentPassword}</p>
+              )}
             </div>
-            <button className="bg-red-500 hover:bg-red-600 dark:bg-red-600 dark:hover:bg-red-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
-              Hapus Akun
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Password Baru</label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <i className="fas fa-key text-gray-400 dark:text-gray-500"></i>
+                </div>
+              <input
+                  type={showPasswords.newPassword ? "text" : "password"}
+                  name="newPassword"
+                  value={passwordData.newPassword}
+                  onChange={handlePasswordChange}
+                  className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                    passwordErrors.newPassword 
+                      ? 'border-red-300 dark:border-red-600 bg-red-50 dark:bg-red-900/20' 
+                      : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700'
+                  } text-gray-900 dark:text-gray-100`}
+                placeholder="Masukkan password baru"
+              />
+                <button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    togglePasswordVisibility('newPassword');
+                  }}
+                  className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-500 dark:text-gray-500"
+                >
+                  <i className={`fas fa-${showPasswords.newPassword ? 'eye-slash' : 'eye'}`}></i>
+                </button>
+              </div>
+              {passwordErrors.newPassword && (
+                <p className="mt-1 text-sm text-red-600 dark:text-red-400">{passwordErrors.newPassword}</p>
+              )}
+              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Password harus minimal 6 karakter, terdiri dari huruf kecil, huruf besar, dan angka.</p>
+              <button
+                type="button"
+                onClick={generateSecurePassword}
+                className="mt-1 text-xs text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 flex items-center"
+              >
+                <i className="fas fa-magic mr-1"></i> Generate password aman
+              </button>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Konfirmasi Password Baru</label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <i className="fas fa-check-circle text-gray-400 dark:text-gray-500"></i>
+                </div>
+              <input
+                  type={showPasswords.confirmPassword ? "text" : "password"}
+                  name="confirmPassword"
+                  value={passwordData.confirmPassword}
+                  onChange={handlePasswordChange}
+                  className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                    passwordErrors.confirmPassword 
+                      ? 'border-red-300 dark:border-red-600 bg-red-50 dark:bg-red-900/20' 
+                      : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700'
+                  } text-gray-900 dark:text-gray-100`}
+                placeholder="Konfirmasi password baru"
+              />
+                <button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    togglePasswordVisibility('confirmPassword');
+                  }}
+                  className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-500 dark:text-gray-500"
+                >
+                  <i className={`fas fa-${showPasswords.confirmPassword ? 'eye-slash' : 'eye'}`}></i>
+                </button>
+              </div>
+              {passwordErrors.confirmPassword && (
+                <p className="mt-1 text-sm text-red-600 dark:text-red-400">{passwordErrors.confirmPassword}</p>
+              )}
+            </div>
+            <button
+              onClick={handleUpdatePassword}
+              disabled={isUpdatingPassword}
+              className={`bg-blue-500 hover:bg-blue-600 dark:bg-blue-600 dark:hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors ${isUpdatingPassword ? 'opacity-70 cursor-not-allowed' : ''} flex items-center justify-center`}
+            >
+              {isUpdatingPassword ? (
+                <>
+                  <i className="fas fa-spinner fa-spin mr-2"></i>
+                  Memperbarui...
+                </>
+              ) : (
+                <>
+                  <i className="fas fa-save mr-2"></i>
+              Update Password
+                </>
+              )}
             </button>
           </div>
-        </div>
-      </div>
-    </div>
-  );
-
-  const renderSecurityTab = () => (
-    <div className="space-y-6">
-      {/* Login History */}
-      <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-md border border-gray-100 dark:border-gray-700">
-        <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4">Riwayat Login</h3>
-        <div className="space-y-3">
-          {[
-            { time: '2023-06-23 14:30', device: 'Chrome - Windows', location: 'Jakarta, Indonesia', status: 'success', isCurrent: true },
-            { time: '2023-06-22 09:15', device: 'Firefox - Windows', location: 'Jakarta, Indonesia', status: 'success', isCurrent: false },
-            { time: '2023-06-21 16:45', device: 'Mobile App - Android', location: 'Jakarta, Indonesia', status: 'failed', isCurrent: false }
-          ].map((login, index) => (
-            <div key={index} className="flex items-center justify-between p-3 border border-gray-200 dark:border-gray-600 rounded-lg">
-              <div className="flex items-center space-x-3">
-                <div className={`w-3 h-3 rounded-full ${login.status === 'success' ? 'bg-green-500' : 'bg-red-500'}`}></div>
-                <div>
-                  <p className="text-sm font-medium text-gray-800 dark:text-gray-200">
-                    {login.device} 
-                    {login.isCurrent && <span className="ml-2 text-xs bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300 px-2 py-1 rounded">Sesi Saat Ini</span>}
-                  </p>
-                  <p className="text-xs text-gray-600 dark:text-gray-400">{login.time} - {login.location}</p>
-                </div>
-              </div>
-              <div className="flex items-center space-x-3">
-                <span className={`text-xs px-2 py-1 rounded ${
-                  login.status === 'success' 
-                    ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-300' 
-                    : 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-300'
-                }`}>
-                  {login.status === 'success' ? 'Berhasil' : 'Gagal'}
-                </span>
-                {login.status === 'success' && (
-                  <button 
-                    onClick={() => {
-                      if (login.isCurrent) {
-                        if (confirm('Anda akan logout dari sesi saat ini. Lanjutkan?')) {
-                          console.log('Logging out current session');
-                          // In real app, this would logout current user
-                        }
-                      } else {
-                        console.log(`Logging out device: ${login.device}`);
-                        // In real app, this would terminate the remote session
-                      }
-                    }}
-                    className={`text-sm font-medium px-3 py-1 rounded border transition-colors ${
-                      login.isCurrent 
-                        ? 'text-orange-600 dark:text-orange-400 hover:text-orange-800 dark:hover:text-orange-300 border-orange-200 dark:border-orange-700 hover:bg-orange-50 dark:hover:bg-orange-900/20'
-                        : 'text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 border-red-200 dark:border-red-700 hover:bg-red-50 dark:hover:bg-red-900/20'
-                    }`}
-                  >
-                    Logout
-                  </button>
-                )}
+          {passwordMessage.text && (
+            <div className={`${
+              passwordMessage.type === 'success' 
+                ? 'bg-green-100 dark:bg-green-900/30 border-green-400 dark:border-green-700 text-green-700 dark:text-green-300' 
+                : 'bg-red-100 dark:bg-red-900/30 border-red-400 dark:border-red-700 text-red-700 dark:text-red-300'
+            } px-4 py-3 rounded-xl border mt-4`}>
+              <div className="flex items-center">
+                <i className={`fas fa-${passwordMessage.type === 'success' ? 'check-circle' : 'exclamation-triangle'} mr-2`}></i>
+                <span>{passwordMessage.text}</span>
+                <button 
+                  onClick={() => setPasswordMessage({ type: '', text: '' })}
+                  className="ml-auto text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                >
+                  <i className="fas fa-times"></i>
+                </button>
               </div>
             </div>
-          ))}
+          )}
+        </div>
+
+        {/* Account Actions */}
+        <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-md border border-gray-100 dark:border-gray-700">
+          <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4">Aksi Akun</h3>
+          <div className="space-y-4">
+            {canDeleteOwnAccount() ? (
+              <div className="flex justify-between items-center p-4 border border-red-200 dark:border-red-800 rounded-lg bg-red-50 dark:bg-red-900/20">
+                <div>
+                  <h4 className="font-medium text-red-800 dark:text-red-300">Hapus Akun</h4>
+                  <p className="text-sm text-red-600 dark:text-red-400">Hapus akun secara permanen (tidak dapat dibatalkan)</p>
+                </div>
+                <button className="bg-red-500 hover:bg-red-600 dark:bg-red-600 dark:hover:bg-red-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
+                  Hapus Akun
+                </button>
+              </div>
+            ) : (
+              <div className="flex justify-between items-center p-4 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700/20">
+                <div>
+                  <h4 className="font-medium text-gray-600 dark:text-gray-400">Hapus Akun</h4>
+                  <p className="text-sm text-gray-500 dark:text-gray-500">
+                    {user?.user_id === 1 
+                      ? "Superadmin default tidak dapat menghapus akun sendiri"
+                      : user?.role === 'superadmin'
+                      ? "Akun superadmin hanya dapat dihapus oleh superadmin default"
+                      : "Akun admin hanya dapat dihapus oleh superadmin"
+                    }
+                  </p>
+                </div>
+                <button 
+                  disabled
+                  className="bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 px-4 py-2 rounded-lg font-medium cursor-not-allowed"
+                >
+                  Hapus Akun
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-6">
@@ -409,7 +643,9 @@ const Pengaturan = () => {
               {tabs.map((tab) => (
                 <button
                   key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
+                  onClick={() => {
+                    setActiveTab(tab.id);
+                  }}
                   className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-left transition-colors ${
                     activeTab === tab.id
                       ? 'bg-blue-50 dark:bg-blue-900 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-700'
@@ -428,7 +664,6 @@ const Pengaturan = () => {
         <div className="lg:w-3/4">
           {activeTab === 'profile' && renderProfileTab()}
           {activeTab === 'account' && renderAccountTab()}
-          {activeTab === 'security' && renderSecurityTab()}
         </div>
       </div>
     </div>

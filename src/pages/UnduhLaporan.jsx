@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   generateReport,
   getReportHistory,
@@ -21,6 +21,10 @@ const UnduhLaporan = () => {
   // Add new state for date range
   const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
   const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
+
+  // Add state for dropdown menu and selected report
+  const [openDropdownId, setOpenDropdownId] = useState(null);
+  const dropdownRefs = useRef({});
 
   const periodOptions = [
     { id: 'today', label: 'Hari Ini', description: 'Data hari ini saja' },
@@ -158,10 +162,52 @@ const UnduhLaporan = () => {
     }
   };
 
+  // Handle toggling the dropdown menu
+  const toggleDropdown = (reportId) => {
+    if (openDropdownId === reportId) {
+      setOpenDropdownId(null);
+    } else {
+      setOpenDropdownId(reportId);
+    }
+  };
+
+  // Handle viewing file details
+  const handleViewDetails = (report) => {
+    // Close dropdown
+    setOpenDropdownId(null);
+    
+    // Show file details in a modal or alert for now
+    alert(`Detail Laporan:\n\nNama: ${report.report_name || getReportTypeDisplayName(report.report_type)}\nUkuran: ${formatFileSize(report.file_size || 0)}\nFormat: ${(report.file_format || report.format)?.toUpperCase()}\nDibuat: ${new Date(report.generated_at || report.created_at).toLocaleString('id-ID')}`);
+    
+    // In a real app, you might show a modal with more details
+  };
+
   // Load report history on component mount
   useEffect(() => {
     loadReportHistory();
   }, []);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (openDropdownId !== null) {
+        const ref = dropdownRefs.current[openDropdownId];
+        if (ref && !ref.contains(event.target)) {
+          setOpenDropdownId(null);
+        }
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [openDropdownId]);
+
+  // Function to set dropdown ref
+  const setDropdownRef = (id, el) => {
+    dropdownRefs.current[id] = el;
+  };
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-6">
@@ -411,15 +457,16 @@ const UnduhLaporan = () => {
             <p className="text-gray-400 dark:text-gray-500 text-sm mt-2">Unduh laporan pertama Anda untuk melihat riwayat di sini</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto -mx-6">
             <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-              <thead>
+              <thead className="bg-gray-50 dark:bg-gray-800/50">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Nama Laporan</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Periode</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden md:table-cell">Periode</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Format</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Ukuran</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Tanggal</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden sm:table-cell">Ukuran</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden md:table-cell">Tanggal</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden lg:table-cell">Status</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Aksi</th>
                 </tr>
               </thead>
@@ -432,7 +479,7 @@ const UnduhLaporan = () => {
                         getReportTypeDisplayName(report.report_type)
                       }
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 hidden md:table-cell">
                       {report.report_name ? 
                         report.report_name.split(' - ').slice(1).join(' - ') || 'Hari Ini' : 
                         formatPeriodForDisplay(report.period, report.date)
@@ -447,20 +494,46 @@ const UnduhLaporan = () => {
                         {(report.file_format || report.format)?.toUpperCase()}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 hidden sm:table-cell">
                       {formatFileSize(report.file_size || 0)}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 hidden md:table-cell">
                       {new Date(report.generated_at || report.created_at).toLocaleDateString('id-ID')}
                     </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm hidden lg:table-cell">
+                      <span className="flex items-center gap-1.5">
+                        <i className="fas fa-check-circle text-green-500 dark:text-green-400"></i>
+                        <span className="text-gray-600 dark:text-gray-300">
+                          Terunduh
+                        </span>
+                      </span>
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      <button 
-                        onClick={() => handleDownloadExisting(report.report_id || report.id)}
-                        className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-medium flex items-center gap-1"
+                      <div 
+                        className="relative" 
+                        ref={(el) => setDropdownRef(report.id || report.report_id || index, el)}
                       >
-                        <i className="fas fa-download text-xs"></i>
-                        Unduh
-                      </button>
+                        <button 
+                          onClick={() => toggleDropdown(report.id || report.report_id || index)}
+                          className="text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 focus:outline-none"
+                        >
+                          <i className="fas fa-ellipsis-v"></i>
+                        </button>
+                        
+                        {openDropdownId === (report.id || report.report_id || index) && (
+                          <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-700 rounded-md shadow-lg z-10 border border-gray-200 dark:border-gray-600">
+                            <div className="py-1">
+                              <button
+                                onClick={() => handleViewDetails(report)}
+                                className="block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600"
+                              >
+                                <i className="fas fa-info-circle mr-2"></i>
+                                Lihat Detail
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}

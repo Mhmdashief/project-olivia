@@ -361,6 +361,64 @@ const downloadReport = async (req, res) => {
   }
 };
 
+// Delete report from history
+const deleteReport = async (req, res) => {
+  try {
+    const { reportId } = req.params;
+    const userId = req.user.user_id;
+
+    // Get report info from database to verify ownership and get file path
+    const selectQuery = 'SELECT file_path FROM reports WHERE report_id = ? AND user_id = ?';
+    const selectResult = await executeQuery(selectQuery, [reportId, userId]);
+
+    if (!selectResult.success || selectResult.data.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Report not found or you do not have permission to delete it'
+      });
+    }
+
+    const report = selectResult.data[0];
+
+    // Delete from database first
+    const deleteQuery = 'DELETE FROM reports WHERE report_id = ? AND user_id = ?';
+    const deleteResult = await executeQuery(deleteQuery, [reportId, userId]);
+
+    if (!deleteResult.success) {
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to delete report from database'
+      });
+    }
+
+    // Try to delete the physical file (if it exists)
+    if (report.file_path) {
+      const filePath = path.join(__dirname, '../uploads/reports', report.file_path);
+      try {
+        if (fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath);
+          console.log(`Deleted file: ${filePath}`);
+        }
+      } catch (fileError) {
+        console.error('Error deleting file:', fileError);
+        // Don't fail the entire operation if file deletion fails
+      }
+    }
+
+    res.json({
+      success: true,
+      message: 'Report deleted successfully'
+    });
+
+  } catch (error) {
+    console.error('Delete report error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to delete report'
+    });
+  }
+};
+
 // Helper function to get report data
 const getReportData = async (reportType, period, date) => {
   let query = '';
@@ -422,18 +480,6 @@ const getReportData = async (reportType, period, date) => {
       `;
       break;
       
-    case 'performa-conveyor':
-      // Mock data for conveyor performance
-      return {
-        total_operations: 150,
-        successful_operations: 145,
-        failed_operations: 5,
-        average_speed: 65.5,
-        uptime_percentage: 96.7,
-        period: period,
-        date: date
-      };
-      
     case 'statistik-produksi':
       query = `
         SELECT 
@@ -454,7 +500,7 @@ const getReportData = async (reportType, period, date) => {
       // Mock data for activity logs
       return {
         activities: [
-          { timestamp: new Date(), action: 'System Start', user: 'System', details: 'Conveyor system started' },
+          { timestamp: new Date(), action: 'System Start', user: 'System', details: 'Monitoring system started' },
           { timestamp: new Date(), action: 'Scan Complete', user: 'Scanner-001', details: 'Egg batch scanned successfully' }
         ],
         period: period,
@@ -553,7 +599,7 @@ const generatePDFReport = async (data, reportType, period, date) => {
     return new Promise((resolve, reject) => {
       const doc = new PDFDocument();
       const writeStream = fs.createWriteStream(filePath);
-      
+
       // Handle stream errors
       writeStream.on('error', (err) => {
         console.error('PDF write stream error:', err);
@@ -727,7 +773,7 @@ const generatePDFReport = async (data, reportType, period, date) => {
           doc.page.height - 50,
           { align: 'center' }
         );
-      }
+  }
 
       // Finalize the PDF
       doc.end();
@@ -776,7 +822,7 @@ const generateExcelReport = async (data, reportType, period, date) => {
     });
     
     // Add empty row
-    worksheet.addRow([]);
+  worksheet.addRow([]);
 
     // Check if we have actual data or the empty placeholder
     const hasRealData = Array.isArray(data) && data.length > 0 && 
@@ -799,7 +845,7 @@ const generateExcelReport = async (data, reportType, period, date) => {
       // Add headers
       const headers = ['No', 'Kode Telur', 'Kualitas', 'Tanggal Scan'];
       const headerRow = worksheet.addRow(headers);
-      
+    
       // Style header row
       headerRow.eachCell((cell) => {
         cell.font = { bold: true };
@@ -963,7 +1009,6 @@ const generateCSVReport = async (data, reportType, period, date) => {
 const getReportTypeDisplayName = (reportType) => {
   const names = {
     'kualitas-telur': 'Laporan Kualitas Telur',
-    'performa-conveyor': 'Laporan Performa Conveyor', 
     'statistik-produksi': 'Laporan Statistik Produksi',
     'riwayat-aktivitas': 'Laporan Riwayat Aktivitas'
   };
@@ -1000,5 +1045,6 @@ const formatPeriodForDisplay = (period, date) => {
 module.exports = {
   generateReport,
   getReportHistory,
-  downloadReport
+  downloadReport,
+  deleteReport
 }; 

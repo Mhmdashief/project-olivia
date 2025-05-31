@@ -39,6 +39,46 @@ const ManajemenAkun = () => {
     }
   };
 
+  // Check if current user can delete target user
+  const canDeleteUser = (targetUser) => {
+    // Cannot delete yourself
+    if (targetUser.user_id === user.user_id) return false;
+    
+    // Default superadmin (user_id = 1) can delete anyone except themselves
+    if (user.user_id === 1) return true;
+    
+    // Regular superadmin can only delete admin users
+    if (user.role === 'superadmin' && targetUser.role === 'admin') return true;
+    
+    // Regular superadmin cannot delete other superadmins (including default superadmin)
+    if (user.role === 'superadmin' && targetUser.role === 'superadmin') return false;
+    
+    // Admin cannot delete anyone
+    if (user.role === 'admin') return false;
+    
+    return false;
+  };
+
+  // Check if current user can edit target user
+  const canEditUser = (targetUser) => {
+    // Users can edit their own profile
+    if (targetUser.user_id === user.user_id) return true;
+    
+    // Default superadmin (user_id = 1) can edit anyone
+    if (user.user_id === 1) return true;
+    
+    // Regular superadmin can only edit admin users (not other superadmins)
+    if (user.role === 'superadmin' && targetUser.role === 'admin') return true;
+    
+    // Regular superadmin cannot edit other superadmins (including default superadmin)
+    if (user.role === 'superadmin' && targetUser.role === 'superadmin') return false;
+    
+    // Admin cannot edit others
+    if (user.role === 'admin') return false;
+    
+    return false;
+  };
+
   useEffect(() => {
     loadUsers();
   }, []);
@@ -190,6 +230,14 @@ const ManajemenAkun = () => {
 
   const handleDelete = async () => {
     if (!selectedUser) return;
+    
+    // Check permission before attempting to delete
+    if (!canDeleteUser(selectedUser)) {
+      setErrors({ 
+        general: 'Anda tidak memiliki izin untuk menghapus akun ini.' 
+      });
+      return;
+    }
     
     setSubmitting(true);
     
@@ -380,13 +428,15 @@ const ManajemenAkun = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex justify-end gap-2">
-                        <button
-                          onClick={() => handleOpenModal('edit', userData)}
-                          className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 p-2 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20"
-                        >
-                          <i className="fas fa-edit"></i>
-                        </button>
-                        {userData.user_id !== user.user_id && (
+                        {canEditUser(userData) && (
+                          <button
+                            onClick={() => handleOpenModal('edit', userData)}
+                            className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 p-2 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                          >
+                            <i className="fas fa-edit"></i>
+                          </button>
+                        )}
+                        {canDeleteUser(userData) && (
                           <button
                             onClick={() => handleOpenModal('delete', userData)}
                             className="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20"

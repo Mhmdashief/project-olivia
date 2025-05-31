@@ -67,26 +67,12 @@ const getDashboardSummary = async (req, res) => {
 
     const alertsResult = await executeQuery(alertsQuery);
 
-    // Get conveyor status
-    const conveyorQuery = `
-      SELECT 
-        conveyor_id, conveyor_name, status, operation_mode, 
-        speed_level, speed_percentage, total_eggs_processed
-      FROM conveyor_systems 
-      WHERE is_active = TRUE
-      ORDER BY conveyor_id
-      LIMIT 1
-    `;
-
-    const conveyorResult = await executeQuery(conveyorQuery);
-
     // Calculate statistics
     const eggStats = eggStatsResult.data[0];
     const detectionStats = detectionResult.data[0];
     const sortingStats = sortingResult.data[0];
     const deviceStats = deviceStatusResult.data[0];
     const alertStats = alertsResult.data[0];
-    const conveyorStats = conveyorResult.data[0] || {};
 
     const totalScanned = eggStats.total_eggs_scanned || 0;
     const totalDetected = detectionStats.total_eggs_detected || 0;
@@ -130,13 +116,6 @@ const getDashboardSummary = async (req, res) => {
           total: alertStats.total_alerts || 0,
           critical: alertStats.critical_alerts || 0,
           high: alertStats.high_alerts || 0
-        },
-        conveyor: {
-          status: conveyorStats.status || 'inactive',
-          operation_mode: conveyorStats.operation_mode || 'automatic',
-          speed_level: conveyorStats.speed_level || 0,
-          speed_percentage: conveyorStats.speed_percentage || 0,
-          total_processed: conveyorStats.total_eggs_processed || 0
         },
         timestamp: new Date().toISOString()
       }
@@ -213,13 +192,11 @@ const getRecentEggs = async (req, res) => {
         eas.ai_confidence,
         eas.quality_score,
         eas.scanned_at,
-        cs.conveyor_name,
         eas.weight,
         eas.length,
         eas.width,
         eas.height
       FROM egg_ai_scans eas
-      JOIN conveyor_systems cs ON eas.conveyor_id = cs.conveyor_id
       ORDER BY eas.scanned_at DESC
       LIMIT ?
     `;

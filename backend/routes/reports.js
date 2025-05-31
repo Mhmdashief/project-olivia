@@ -4,7 +4,8 @@ const { verifyToken } = require('../middleware/auth');
 const {
   generateReport,
   getReportHistory,
-  downloadReport
+  downloadReport,
+  deleteReport
 } = require('../controllers/reportController');
 
 // Apply authentication middleware to all routes
@@ -18,5 +19,8 @@ router.get('/history', getReportHistory);
 
 // Download existing report
 router.get('/download/:reportId', downloadReport);
+
+// Delete report from history
+router.delete('/:reportId', deleteReport);
 
 module.exports = router; 

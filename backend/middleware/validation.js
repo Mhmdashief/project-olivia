@@ -144,9 +144,6 @@ const validateEggScan = [
   body('controller_device_id')
     .isInt({ min: 1 })
     .withMessage('Valid controller device ID is required'),
-  body('conveyor_id')
-    .isInt({ min: 1 })
-    .withMessage('Valid conveyor ID is required'),
   body('quality')
     .isIn(['good', 'bad', 'uncertain'])
     .withMessage('Quality must be good, bad, or uncertain'),
@@ -169,22 +166,6 @@ const validateEggScan = [
     .optional()
     .isFloat({ min: 0, max: 20 })
     .withMessage('Height must be between 0 and 20 cm'),
-  handleValidationErrors
-];
-
-// Conveyor control validation
-const validateConveyorControl = [
-  body('action')
-    .isIn(['start', 'stop', 'pause', 'resume', 'speed_change', 'reset'])
-    .withMessage('Action must be start, stop, pause, resume, speed_change, or reset'),
-  body('speed_level')
-    .optional()
-    .isInt({ min: 1, max: 10 })
-    .withMessage('Speed level must be between 1 and 10'),
-  body('speed_percentage')
-    .optional()
-    .isFloat({ min: 0, max: 100 })
-    .withMessage('Speed percentage must be between 0 and 100'),
   handleValidationErrors
 ];
 
@@ -234,7 +215,6 @@ module.exports = {
   validatePasswordChange,
   validateESP32Device,
   validateEggScan,
-  validateConveyorControl,
   validatePagination,
   validateDateRange,
   validateId

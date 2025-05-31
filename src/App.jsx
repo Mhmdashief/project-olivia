@@ -6,7 +6,6 @@ import Layout from './components/Layout';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import DataKualitasTelur from './pages/DataKualitasTelur';
-import PantauConveyor from './pages/PantauConveyor';
 import UnduhLaporan from './pages/UnduhLaporan';
 import ManajemenAkun from './pages/ManajemenAkun';
 import Pengaturan from './pages/Pengaturan';
@@ -33,14 +32,6 @@ const AuthenticatedApp = () => {
         <ProtectedRoute>
           <Layout>
             <DataKualitasTelur />
-          </Layout>
-        </ProtectedRoute>
-      } />
-      
-      <Route path="/pantau-conveyor" element={
-        <ProtectedRoute>
-          <Layout>
-            <PantauConveyor />
           </Layout>
         </ProtectedRoute>
       } />

@@ -99,7 +99,12 @@ export const AuthProvider = ({ children }) => {
         // Update local user state
         const updatedUser = { ...user, ...response.data.user };
         setUser(updatedUser);
-        authService.storeAuthData(updatedUser, authService.getAuthToken());
+        
+        // Get current token and store updated user data
+        const currentToken = authService.getAuthToken();
+        if (currentToken) {
+          authService.storeAuthData(updatedUser, currentToken);
+        }
       }
       
       return response;
@@ -115,7 +120,10 @@ export const AuthProvider = ({ children }) => {
       return response;
     } catch (error) {
       console.error('Change password error:', error);
-      return { success: false, message: 'Terjadi kesalahan saat mengubah password' };
+      return { 
+        success: false, 
+        message: error.message || 'Terjadi kesalahan saat mengubah password' 
+      };
     }
   };
 

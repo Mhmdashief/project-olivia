@@ -49,7 +49,6 @@ Admin (Level 1) → Access all features except user management
 - **🔐 Login System** - Secure authentication with role management
 - **📊 Dashboard Real-time** - Monitoring produksi dan kualitas telur
 - **🥚 Data Kualitas Telur** - Analisis detail hasil scanning
-- **⚙️ Pantau Conveyor** - Kontrol dan monitoring conveyor system
 - **📄 Unduh Laporan** - Generate laporan dalam format PDF, Excel, CSV
 - **👥 Manajemen Akun** - User management (SuperAdmin only)
 - **⚙️ Pengaturan** - System settings dan user profile
@@ -59,7 +58,6 @@ Admin (Level 1) → Access all features except user management
 - **📡 Device Management** - Registration dan monitoring perangkat IoT
 - **⚡ Real-time Data** - Streaming data dari sensor dan scanner
 - **🚨 Alert System** - Notifikasi otomatis untuk anomali
-- **🎮 Remote Control** - Kontrol conveyor dari web interface
 - **🔄 Data Synchronization** - Sinkronisasi data offline/online
 
 ### 📊 Analytics & Reporting
@@ -77,7 +75,6 @@ Database dirancang dengan 15+ tabel utama yang saling terintegrasi:
 #### Core Tables
 - **users** - User management dan authentication dengan role hierarchy
 - **devices** - IoT device registration dan status
-- **conveyor_systems** - Conveyor configuration dan monitoring
 - **egg_scans** - Data hasil scanning telur (tabel utama)
 - **quality_standards** - Standard kualitas telur
 
@@ -206,7 +203,6 @@ const response = await fetch('/api/auth/device-token', {
 const scanData = {
   egg_code: 'EGG-20240115-0001',
   device_id: 1,
-  conveyor_id: 1,
   measurements: {
     weight: 62.5,
     length: 6.2,

@@ -92,9 +92,11 @@ class AuthService {
       
       return {
         success: true,
+        message: response.message || 'Password changed successfully',
         data: response.data
       };
     } catch (error) {
+      console.error('Change password error:', error);
       return {
         success: false,
         message: error.message || 'Failed to change password'
@@ -171,6 +173,11 @@ class AuthService {
   clearAuthData() {
     localStorage.removeItem('auth_token');
     localStorage.removeItem('user_data');
+  }
+
+  // Get stored auth token
+  getAuthToken() {
+    return localStorage.getItem('auth_token');
   }
 }
 
